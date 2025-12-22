@@ -1,0 +1,4 @@
+TODO:
+- make a src directory and move everything in it. This will
+  need to modify the source code to be able to compile
+  searching in `src/` instead of `./`

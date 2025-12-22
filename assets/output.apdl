@@ -1,0 +1,129 @@
+! ==================================================================
+! EXPORT NODE DISP
+! ==================================================================
+/POST1
+ALLSEL
+SET, LAST
+
+! Get counts
+*GET, NNODE, NODE, 0, COUNT
+*GET, NELEM, ELEM, 0, COUNT
+
+! Allocate arrays
+*DIM, NodeData, ARRAY, NNODE, 7, REPLACE
+*DIM, OUT_ROW, ARRAY, 7, REPLACE
+
+! Get node coordinates and displacements
+*VGET, NodeData(1,1), NODE, , LOC, X   ! X
+*VGET, NodeData(1,2), NODE, , LOC, Y   ! Y
+*VGET, NodeData(1,3), NODE, , LOC, Z   ! Z
+*VGET, NodeData(1,4), NODE, 1, U, X    ! UX
+*VGET, NodeData(1,5), NODE, 0, U, Y    ! UY
+*VGET, NodeData(1,6), NODE, 0, U, Z    ! UZ
+*VFILL, NodeData(1,7), RAMP, 1, 1      ! Node ID
+
+! Write to file
+*CFOPEN, 'node_disp', 'txt', 'C:\Users\si\Downloads\ardo-main\ardo-main\model\results',,0
+*VWRITE, 'NODE', 'X', 'Y', 'Z', 'DX', 'DY', 'DZ'
+(A8, 6A12)
+*DO, I, 1, NNODE
+  *DO, J, 1, 7
+    *SET, OUT_ROW(J), NodeData(I,J)
+  *ENDDO
+  *VWRITE, OUT_ROW(7), OUT_ROW(1), OUT_ROW(2), OUT_ROW(3), OUT_ROW(4), OUT_ROW(5), OUT_ROW(6)
+  (F8.0, 6F12.6)
+*ENDDO
+*CFCLOSE
+FINISH
+
+! ==================================================================
+! EXPORT NODAL STRESSES
+! ==================================================================
+/POST1
+ALLSEL
+SET, LAST
+
+! Get node count
+*GET, NNODE, NODE, 0, COUNT
+
+! Allocate arrays
+*DIM, NodeDataS, ARRAY, NNODE, 7
+*DIM, OUT_ROWS, ARRAY, 7
+
+! Get stress components
+*VGET, NodeDataS(1,1), NODE, , S, X      ! SX (Stress in X)
+*VGET, NodeDataS(1,2), NODE, , S, Y      ! SY (Stress in Y)
+*VGET, NodeDataS(1,3), NODE, , S, Z      ! SZ (Stress in Z)
+*VGET, NodeDataS(1,4), NODE, , S, XY     ! SXY (Shear Stress XY)
+*VGET, NodeDataS(1,5), NODE, , S, YZ     ! SYZ (Shear Stress YZ)
+*VGET, NodeDataS(1,6), NODE, , S, XZ     ! SXZ (Shear Stress XZ)
+*VFILL, NodeDataS(1,7), RAMP, 1, 1       ! Node ID
+
+! Write to file
+*CFOPEN, 'stress_components', 'txt', 'C:\Users\si\Downloads\ardo-main\ardo-main\model\results',,0
+*VWRITE, 'NODE', 'SX', 'SY', 'SZ', 'SXY', 'SYZ', 'SXZ'
+(A8, 6A12)
+*DO, I, 1, NNODE
+  *DO, J, 1, 7
+    *SET, OUT_ROWS(J), NodeDataS(I,J)
+  *ENDDO
+  *VWRITE, OUT_ROWS(7), OUT_ROWS(1), OUT_ROWS(2), OUT_ROWS(3), OUT_ROWS(4), OUT_ROWS(5), OUT_ROWS(6)
+  (F8.0, 6F12.4)
+*ENDDO
+*CFCLOSE
+
+!-------------------------------------------------------
+/POST1
+ALLSEL
+SET, LAST
+
+! Get node count
+*GET, NNODE, NODE, 0, COUNT
+
+! Allocate arrays
+*DIM, NodeDataP, ARRAY, NNODE, 6
+*DIM, OUT_ROWP, ARRAY, 6
+
+! Get principal stresses and stress intensity/equivalent stress
+*VGET, NodeDataP(1,1), NODE, , S, 1      ! S1 (Principal Stress 1)
+*VGET, NodeDataP(1,2), NODE, , S, 2      ! S2 (Principal Stress 2)
+*VGET, NodeDataP(1,3), NODE, , S, 3      ! S3 (Principal Stress 3)
+*VGET, NodeDataP(1,4), NODE, , S, INT    ! SINT (Stress Intensity)
+*VGET, NodeDataP(1,5), NODE, , S, EQV    ! SEQV (Equivalent Stress)
+*VFILL, NodeDataP(1,6), RAMP, 1, 1       ! Node ID
+
+! Write to file
+*CFOPEN, 'principal_stress', 'txt', 'C:\Users\si\Downloads\ardo-main\ardo-main\model\results',,0
+*VWRITE, 'NODE', 'S1', 'S2', 'S3', 'SINT', 'SEQV'
+(A8, 5A12)
+*DO, I, 1, NNODE
+  *DO, J, 1, 6
+    *SET, OUT_ROWP(J), NodeDataP(I,J)
+  *ENDDO
+  *VWRITE, OUT_ROWP(6), OUT_ROWP(1), OUT_ROWP(2), OUT_ROWP(3), OUT_ROWP(4), OUT_ROWP(5)
+  (F8.0, 5F12.4)
+*ENDDO
+*CFCLOSE
+FINISH
+
+
+/OUTPUT, element_list, txt , 'C:\Users\si\Downloads\ardo-main\ardo-main\model\results',,0
+ALLSEL, ALL
+ELIST, ALL
+/OUTPUT
+
+/OUTPUT, bc_list, txt , 'C:\Users\si\Downloads\ardo-main\ardo-main\model\results',,0
+ALLSEL, ALL
+DLIST, ALL
+/OUTPUT
+
+/OUTPUT, force_list, txt , 'C:\Users\si\Downloads\ardo-main\ardo-main\model\results',,0
+ALLSEL, ALL
+FLIST, ALL
+/OUTPUT
+
+/OUTPUT, pressure_list, txt , 'C:\Users\si\Downloads\ardo-main\ardo-main\model\results',,0
+ALLSEL, ALL
+PLIST, ALL
+/OUTPUT
+

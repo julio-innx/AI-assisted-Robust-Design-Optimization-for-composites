@@ -1,0 +1,97 @@
+# gnn/train.py
+import os
+import torch
+import torch.nn as nn
+from torch.optim import Adam
+from torch_geometric.loader import DataLoader
+import matplotlib.pyplot as plt
+import streamlit as st
+from gnn.model import CompositeGNN
+from gnn.physics_loss import virtual_work_loss
+
+# Global flag for stopping
+STOP_TRAINING = False
+
+def set_stop_training():
+    global STOP_TRAINING
+    STOP_TRAINING = True
+
+def train_gnn(
+    dataset,
+    tolerance=1e-5,
+    max_epochs=1000,
+    lr=3e-5,
+    hidden=64,
+    progress_bar=None,
+    loss_chart=None,
+    start_epoch=0,
+    loss_history=None,
+    materials_dict=None
+):
+    loader = DataLoader(dataset, batch_size=10, shuffle=True)
+    in_channels = dataset[0].x.shape[1]
+    model = CompositeGNN(in_channels=in_channels, hidden_channels=hidden, out_channels=9)
+    optimizer = Adam(model.parameters(), lr=lr)
+
+    model.train()
+    loss_history = loss_history if loss_history is not None else []
+
+    progress_bar = st.progress(0)
+    loss_chart = st.empty()
+
+    for epoch in range(start_epoch, max_epochs):
+        if STOP_TRAINING:
+            break
+
+        total_loss = 0
+        for data in loader:
+            optimizer.zero_grad()
+            pred = model(data)
+            pred_disp = pred[:, :3]
+        
+            # Standard data loss
+            #mse_loss = F.mse_loss(pred_disp, data.y[:, :3])
+            criterion = nn.L1Loss()
+            #criterion = nn.MSELoss()
+            lossu = criterion(pred_disp, data.y[:, :3])
+        
+            # Physics loss (virtual work == 0)
+            phys_loss = virtual_work_loss(
+                batch=data,
+                pred_disp=pred_disp,
+                pressure=-500.0,
+                lambda_phys=1e-4
+            )
+        
+            loss = lossu + phys_loss
+            #loss = lossu
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item() * data.num_graphs
+
+        avg_loss = total_loss / len(dataset)
+        loss_history.append(avg_loss)
+
+        loss_chart.line_chart(loss_history)
+        progress_bar.progress(min((epoch + 1) / max_epochs, 1.0))
+
+        if len(loss_history) > 1:
+            rel_change = abs(avg_loss - loss_history[-2]) / (loss_history[-2] + 1e-8)
+            if rel_change < tolerance:
+                st.success(f"✅ Converged at Epoch {epoch}: rel Δ = {rel_change:.2e}")
+                break
+
+    # ✅ Save model WITH architecture info
+    torch.save({
+        'model': model.state_dict(),
+        'in_channels': in_channels,
+        'hidden_channels': hidden,
+        'out_channels': 9,
+        'epoch': epoch,
+        'loss_history': loss_history,
+        'optimizer': optimizer.state_dict()
+    }, "composite_gnn.pth")
+    
+    st.success("✅ Model saved with architecture info!")
+    return model, loss_history

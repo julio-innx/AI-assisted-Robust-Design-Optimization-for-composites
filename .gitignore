@@ -1,0 +1,7 @@
+*.pth
+*.npz
+*.mac
+*.txt
+*.iges
+*.json
+*.out
